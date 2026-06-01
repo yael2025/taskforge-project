@@ -8,6 +8,12 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
+from collections.abc import Mapping
+from typing import get_args
+from typing import get_origin
+from typing import get_type_hints
+from types import UnionType
+
 LOGGER = logging.getLogger(__name__)
 
 def timed(func:Callable[...,Any])-> Callable[...,Any]:
@@ -90,6 +96,50 @@ def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
     wrapper.cache_clear = cache_clear  # type: ignore[attr-defined]
     wrapper.cache_info = cache_info  # type: ignore[attr-defined]
 
+    return wrapper
+
+
+def _matches_type(value: Any, expected_type: Any) -> bool:
+    """Check whether a value matches a supported type hint."""
+    origin = get_origin(expected_type)
+    args = get_args(expected_type)
+
+    if origin is None:
+        return isinstance(value, expected_type)
+    
+    if origin is list:
+        return isinstance(value, list) and all(
+            _matches_type(item, args[0]) for item in value
+        )
+    
+    if origin is dict:
+        key_type, value_type = args
+        return isinstance(value, dict) and all(
+            _matches_type(key, key_type) and _matches_type(val, value_type)
+            for key, val in value.items()
+        )
+    
+    if origin is UnionType or str(origin) == "typing.Union":
+        return any(_matches_type(value, arg) for arg in args)
+    
+    return isinstance(value, origin)
+
+def validate_types(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Validate function arguments according to their type hints."""
+    hints = get_type_hints(func)
+    signature = inspect.signature(func)
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        bound_arguments = signature.bind(*args, **kwargs)
+        bound_arguments.apply_defaults()
+
+        for name, value in bound_arguments.arguments.items():
+            if name in hints and not _matches_type(value, hints[name]):
+                raise TypeError(
+                    f"Argument '{name}' must be {hints[name]}, got {type(value)}"
+                )
+        return func(*args, **kwargs)
     return wrapper
     
         
