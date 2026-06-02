@@ -8,7 +8,7 @@ from typing import Any
 
 from taskforge.utils import chunked
 
-def task_batches(tasks: Iterable[Any], batch_size: int)-> Generator(list[Any], None, None):
+def task_batches(tasks: Iterable[Any], batch_size: int)-> Generator[list[Any], None, None]:
      """Yield task batches with the requested batch size."""
      yield from chunked(tasks, batch_size)
 
@@ -33,7 +33,7 @@ def paginate(
         yield from page
         offset += page_size
 
-def event_router()-> Generator(None, dict[str, Any], None):
+def event_router()-> Generator[None, dict[str, Any], None]:
      """Route incoming events to registered handlers."""
      handlers : dict[str, Callable[[dict[str, Any]], None]]={}
 
