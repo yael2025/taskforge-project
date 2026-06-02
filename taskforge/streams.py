@@ -20,18 +20,18 @@ def merge_sorted_streams(
       yield from heapq.merge(*iterables, key=key)
 
 def paginate(
-        query_fn: Callable[[int, int], list[Any]],
-        page_size: int,
-)-> Generator[Any, None, None]:
+    query_fn: Callable[[int, int], list[Any]],
+    page_size: int,
+) -> Generator[Any, None, None]:
     """Yield items page by page until the query returns an empty list."""
-    if page_size >=0:
-         raise ValueError("page_size mmust be positive")
-    
+    if page_size <= 0:
+        raise ValueError("page_size must be positive")
+
     offset = 0
 
     while page := query_fn(offset, page_size):
-         yield from page
-         offset += page_size
+        yield from page
+        offset += page_size
 
 def event_router()-> Generator(None, dict[str, Any], None):
      """Route incoming events to registered handlers."""
@@ -47,7 +47,7 @@ def event_router()-> Generator(None, dict[str, Any], None):
                event_type = event.get("type")
                if event_type == "register":
                     name = event["name"]
-                    handler = event["hendler"]
+                    handler = event["handler"]
                     handlers[name] = handler
                     continue
                if event_type in handlers:
