@@ -25,6 +25,7 @@ class AsyncScheduler:
         self._lock = asyncio.Lock()
         self._shutdown_event = asyncio.Event()
         self.task_timeout = task_timeout
+        self._running_tasks: set[asyncio.Task[None]] = set()
 
     async def submit(self, task: Task) -> None:
         """Submit a task to the scheduler."""
@@ -63,11 +64,11 @@ class AsyncScheduler:
                 task = await self._queue.get()
                 remaining.remove(task.task_id)
 
-                running.add(
-                    asyncio.create_task(
-                        self._execute_task(task)
-                    )
+                worker = asyncio.create_task(
+                    self._execute_task(task)
                 )
+                running.add(worker)
+                self._running_tasks.add(worker)
 
             if running:
                 done, running = await asyncio.wait(
@@ -77,6 +78,10 @@ class AsyncScheduler:
 
                 for finished_task in done:
                     await finished_task
+
+                self._running_tasks.discard(finished_task)
+                await finished_task
+
             elif remaining:
                 raise TaskExecutionError(
                     "No runnable tasks remain. Possible failed dependency."
@@ -132,8 +137,17 @@ class AsyncScheduler:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit async context manager."""
-        self._shutdown_event.set()
+         """Exit async context manager and cancel running tasks."""
+         self._shutdown_event.set()
+
+         for task in self._running_tasks:
+             task.cancel()
+         if self._running_tasks:
+             await asyncio.gather(
+                 *self._running_tasks,
+                 return_exceptions=True,
+             )
+         self._running_tasks.clear()
 
 
 async def gather_with_limit(
