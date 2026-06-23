@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
-import pytest
 
 from taskforge.async_scheduler import AsyncScheduler, gather_with_limit, run_sync
-from taskforge.exceptions import SchedulerStateError, TaskExecutionError
+from taskforge.exceptions import TaskExecutionError
 from taskforge.task import Task
 
 
