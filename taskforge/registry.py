@@ -55,8 +55,10 @@ class ConfigMeta(type):
 
         if schema is None:
             raise TaskForgeError(
-                f"{name} must define __config_schema__"
+                f"{name} must define the '__config_schema__' attribute"
             )
+        if not isinstance(schema, dict):
+            raise TaskForgeError("__config_schema__ must be a dictionary")
 
         for field_name, field_type in schema.items():
             namespace[field_name] = Typed(field_type)
