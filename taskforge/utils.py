@@ -12,7 +12,7 @@ from taskforge.task import Task
 def chunked(iterable: Iterable[Any], size: int) -> Iterable[list[Any]]:
     """Yield lists of the given size from an iterable."""
     if size <= 0:
-        raise ValueError("size must be positive")
+        raise ValueError("size must be greater than zero")
 
     iterator = iter(iterable)
 
@@ -27,15 +27,24 @@ def retry_values(
     **kwargs: Any,
 ) -> list[Any]:
     """Call a function several times and return all results."""
-    if attempts <= 0:
-        raise ValueError("attempts must be positive")
+    if attempts < 0:
+        raise ValueError("attempts cannot be negative")
+
+    if attempts == 0:
+        return []
 
     return [func(*args, **kwargs) for _ in range(attempts)]
 
 
 def topological_sort(tasks: Iterable[Task]) -> list[Task]:
     """Sort tasks according to their dependencies."""
-    task_map = {task.task_id: task for task in tasks}
+    task_list = list(tasks)
+    task_ids = [task.task_id for task in task_list]
+
+    if len(task_ids) != len(set(task_ids)):
+        raise TaskValidationError("Duplicate task ID found")
+
+    task_map = {task.task_id: task for task in task_list}
     visited: set[str] = set()
     visiting: set[str] = set()
     result: list[Task] = []
@@ -45,11 +54,11 @@ def topological_sort(tasks: Iterable[Task]) -> list[Task]:
             return
 
         if task.task_id in visiting:
-            raise TaskValidationError("cycle detected in task dependencies")
+            raise TaskValidationError("Cyclic dependency detected")
 
         visiting.add(task.task_id)
 
-        for dependency_id in task.dependencies:
+        for dependency_id in sorted(task.dependencies):
             if dependency_id not in task_map:
                 raise TaskValidationError(
                     f"missing dependency: {dependency_id}"

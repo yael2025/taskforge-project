@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from numbers import Real
 from typing import Any
 
 
 class Typed:
     """Descriptor that validates a value type."""
 
-    def __init__(self, expected_type: type[Any]) -> None:
+    def __init__(self, expected_type: type[Any] | tuple[type[Any], ...]) -> None:
         self.expected_type = expected_type
         self.private_name = ""
 
@@ -21,16 +22,13 @@ class Typed:
 
     def __set__(self, instance: Any, value: Any) -> None:
         if not isinstance(value, self.expected_type):
-            raise TypeError(
-                f"Expected {self.expected_type.__name__}, "
-                f"got {type(value).__name__}"
-            )
+            raise TypeError("Value has an invalid type")
 
         setattr(instance, self.private_name, value)
 
 
 class Positive:
-    """Descriptor that validates a positive value."""
+    """Descriptor that validates a positive numeric value."""
 
     def __init__(self) -> None:
         self.private_name = ""
@@ -45,6 +43,9 @@ class Positive:
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
+        if not isinstance(value, Real):
+            raise TypeError("Value must be numeric")
+
         if value <= 0:
             raise ValueError("Value must be positive")
 
@@ -52,9 +53,9 @@ class Positive:
 
 
 class Range:
-    """Descriptor that validates a value is inside a range."""
+    """Descriptor that validates a numeric value is inside a range."""
 
-    def __init__(self, low: int, high: int) -> None:
+    def __init__(self, low: Real, high: Real) -> None:
         self.low = low
         self.high = high
         self.private_name = ""
@@ -69,6 +70,9 @@ class Range:
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
+        if not isinstance(value, Real):
+            raise TypeError("Value must be numeric")
+
         if not self.low <= value <= self.high:
             raise ValueError(
                 f"Value must be between {self.low} and {self.high}"
