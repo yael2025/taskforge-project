@@ -17,13 +17,11 @@ class Typed:
     def __get__(self, instance: Any, owner: type[Any]) -> Any:
         if instance is None:
             return self
-
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
         if not isinstance(value, self.expected_type):
             raise TypeError("Value has an invalid type")
-
         setattr(instance, self.private_name, value)
 
 
@@ -39,16 +37,13 @@ class Positive:
     def __get__(self, instance: Any, owner: type[Any]) -> Any:
         if instance is None:
             return self
-
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
         if not isinstance(value, Real):
             raise TypeError("Value must be numeric")
-
         if value <= 0:
             raise ValueError("Value must be positive")
-
         setattr(instance, self.private_name, value)
 
 
@@ -66,18 +61,13 @@ class Range:
     def __get__(self, instance: Any, owner: type[Any]) -> Any:
         if instance is None:
             return self
-
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
         if not isinstance(value, Real):
             raise TypeError("Value must be numeric")
-
         if not self.low <= value <= self.high:
-            raise ValueError(
-                f"Value must be between {self.low} and {self.high}"
-            )
-
+            raise ValueError(f"Value must be between {self.low} and {self.high}")
         setattr(instance, self.private_name, value)
 
 
@@ -93,16 +83,13 @@ class NonEmptyString:
     def __get__(self, instance: Any, owner: type[Any]) -> Any:
         if instance is None:
             return self
-
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
         if not isinstance(value, str):
             raise TypeError("Value must be a string")
-
         if not value.strip():
             raise ValueError("Value cannot be empty")
-
         setattr(instance, self.private_name, value)
 
 
@@ -115,18 +102,15 @@ class Composed:
 
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self.private_name = f"_{name}"
-
         for descriptor in self.descriptors:
             descriptor.__set_name__(owner, name)
 
     def __get__(self, instance: Any, owner: type[Any]) -> Any:
         if instance is None:
             return self
-
         return getattr(instance, self.private_name)
 
     def __set__(self, instance: Any, value: Any) -> None:
         for descriptor in self.descriptors:
             descriptor.__set__(instance, value)
-
         setattr(instance, self.private_name, value)
