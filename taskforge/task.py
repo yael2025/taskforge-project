@@ -26,6 +26,7 @@ class Task:
         compare=False,
     )
     created_at: datetime = field(default_factory=datetime.now, compare=False)
+    timeout: float | None = field(default=None, compare=False)
 
     def __post_init__(self) -> None:
         """Validate task fields after initialization."""
@@ -49,7 +50,10 @@ class Task:
 
         if not callable(self.payload) and not inspect.iscoroutine(self.payload):
             raise TaskValidationError("payload must be callable or coroutine")
-
+         
+        if self.timeout is not None and self.timeout <= 0:
+            raise TaskValidationError("timeout must be positive")
+         
         object.__setattr__(
             self,
             "sort_index",
