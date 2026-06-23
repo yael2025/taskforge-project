@@ -11,7 +11,7 @@ from taskforge.task import Task
 class AsyncScheduler:
     """Asynchronous scheduler that respects task dependencies."""
 
-    def __init__(self, max_concurrency: int = 3) -> None:
+    def __init__(self, max_concurrency: int = 3,task_timeout: float | None = None,) -> None:
         if max_concurrency <= 0:
             raise ValueError("max_concurrency must be positive")
 
@@ -24,6 +24,7 @@ class AsyncScheduler:
         self._queue: asyncio.Queue[Task] = asyncio.Queue()
         self._lock = asyncio.Lock()
         self._shutdown_event = asyncio.Event()
+        self.task_timeout = task_timeout
 
     async def submit(self, task: Task) -> None:
         """Submit a task to the scheduler."""
@@ -100,10 +101,23 @@ class AsyncScheduler:
             result = task.payload()
 
             if asyncio.iscoroutine(result):
-                result = await result
+                if self.task_timeout is None:
+                    result = await result
+                else:
+                    result = await asyncio.wait_for(
+                    result,
+                    timeout=self.task_timeout,
+                )
 
             async with self._lock:
                 self._results[task.task_id] = result
+            
+        except TimeoutError as error:
+            async with self._lock:
+                self._failed[task.task_id] = error
+            raise TaskExecutionError(
+                f"Task timed out: {task.task_id}"
+            ) from error
 
         except (RuntimeError, ValueError, TypeError) as error:
             async with self._lock:
