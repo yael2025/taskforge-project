@@ -62,3 +62,30 @@ class AsyncScheduler:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         self._shutdown_event.set()
+
+
+async def gather_with_limit(
+        coros: list[Any],
+        limit: int,
+    ) -> list[Any]:
+        """Run coroutines with a maximum concurrency limit."""
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        
+        semaphore = asyncio.Semaphore(limit)
+
+        async def run_one(coro: Any) -> Any:
+            async with semaphore:
+                return await coro
+            
+        return await asyncio.gather(
+            *(run_one(coro) for coro in coros)
+                )
+def run_sync(scheduler: AsyncScheduler) -> dict[str, Any]:
+    """
+    Run an AsyncScheduler from synchronous code.
+
+    Blocking calls inside async tasks are dangerous because they stop the
+    event loop and prevent other tasks from running concurrently.
+    """
+    return asyncio.run(scheduler.run_until_complete())
