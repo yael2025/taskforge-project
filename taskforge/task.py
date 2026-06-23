@@ -57,7 +57,7 @@ class Task:
           
           object.__setattr__(
                self,
-               "sort_ index",
+               "sort_index",
                (-self.priority, self.created_at)
           )
 
